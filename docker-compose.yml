@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  register-server:
+    build:
+      context: .
+      dockerfile: ./jhipster-registry/Dockerfile
+    container_name: jhipster
+    ports:
+     - "8761:8761"
+    networks:
+     - "discovery"
+    environment:
+      - LOGGING_FILE=/tmp/register-server.log
+      - SPRING_PROFILES_ACTIVE=dev
+      - SECURITY_USER_PASSWORD=admin
+
+  auth:
+    image: auth
+    depends_on:
+      - auth-mongodb
+      - register-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod,swagger
+      - SPRING_DATA_MONGODB_URI=mongodb://localhost:27017
+      - SPRING_DATA_MONGODB_DATABASE=auth
+      - JHIPSTER_SLEEP=10
+      - SECURITY_USER_PASSWORD=admin
+    ports:
+     - "9999:9999"
+    build:
+      context: .
+      dockerfile: ./auth/src/main/docker/Dockerfile
+    networks:
+      - "discovery"
+  auth-mongodb:
+    container_name: auth-mongodb
+    image: mongo:3.2.10
+    networks:
+      - "discovery"
+    environment:
+      - AUTH=no
+
+
+networks:
+  discovery:

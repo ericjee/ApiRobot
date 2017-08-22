@@ -4,7 +4,7 @@ services:
   register-server:
     build:
       context: .
-      dockerfile: ./jhipster-registry/Dockerfile
+      dockerfile: ./jhipster-registry/src/main/docker/dev/Dockerfile
     container_name: jhipster
     ports:
      - "8761:8761"
@@ -15,17 +15,104 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - SECURITY_USER_PASSWORD=admin
 
+  gateway-app:
+    build:
+      context: .
+      dockerfile: ./gateway/src/main/docker/Dockerfile
+    depends_on:
+      - auth-mongodb
+      - register-server
+    networks:
+      - "discovery"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev,swagger
+      - SPRING_CLOUD_CONFIG_URI=http://admin:admin@register-server:8761/config
+      - SPRING_DATA_MONGODB_URI=mongodb://auth-mongodb:27017
+      - SPRING_DATA_MONGODB_DATABASE=gateway
+      - REGISTRY_URL=http://admin:admin@register-server:8761/eureka
+#      - SPRING_DATA_CASSANDRA_CONTACTPOINTS=cassandra
+      - JHIPSTER_SLEEP=40 # gives time for uaa and the Cassandra cluster to start and execute the migration scripts
+    ports:
+      - "8080:8080"
+
+  apiservice-app:
+    build:
+      context: .
+      dockerfile: ./api_service/src/main/docker/Dockerfile
+    networks:
+      - "discovery"
+    ports:
+      - "8083:8083"
+    depends_on:
+      - auth-mongodb
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod,swagger
+      - SPRING_CLOUD_CONFIG_URI=http://admin:admin@register-server:8761/config
+      - SPRING_DATA_MONGODB_URI=mongodb://auth-mongodb:27017
+      - SPRING_DATA_MONGODB_DATABASE=apiservice
+      - REGISTRY_URL=http://admin:admin@register-server:8761/eureka/
+      - JHIPSTER_SLEEP=10 # gives time for the database to boot before the application
+
+  apimanageservice-app:
+    image: apimanageservice
+    build:
+      context: .
+      dockerfile: ./api_manage_service/src/main/docker/Dockerfile
+    networks:
+      - "discovery"
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod,swagger
+      - SPRING_CLOUD_CONFIG_URI=http://admin:admin@register-server:8761/config
+      - SPRING_DATA_MONGODB_URI=mongodb://auth-mongodb:27017
+      - SPRING_DATA_MONGODB_DATABASE=apimanageservice
+      - REGISTRY_URL=http://admin:admin@register-server:8761/eureka/
+      - JHIPSTER_SLEEP=10 # gives time for the database to boot before the application
+
+  jenkinsservice-app:
+    build:
+      context: .
+      dockerfile: ./jenkins_service/src/main/docker/Dockerfile
+    networks:
+      - "discovery"
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod,swagger
+      - SPRING_CLOUD_CONFIG_URI=http://admin:admin@register-server:8761/config
+      - SPRING_DATA_MONGODB_URI=mongodb://auth-mongodb:27017
+      - SPRING_DATA_MONGODB_DATABASE=jenkinsservice
+      - REGISTRY_URL=http://admin:admin@register-server:8761/eureka/
+      - JHIPSTER_SLEEP=10 # gives time for the database to boot before the application
+
+  onepass-app:
+    build:
+      context: .
+      dockerfile: ./webui/src/main/docker/Dockerfile
+    networks:
+      - "discovery"
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod,swagger
+      - SPRING_CLOUD_CONFIG_URI=http://admin:admin@register-server:8761/config
+      - SPRING_DATA_MONGODB_URI=mongodb://auth-mongodb:27017
+      - SPRING_DATA_MONGODB_DATABASE=onepass
+      - REGISTRY_URL=http://admin:admin@register-server:8761/eureka/
+      - JHIPSTER_SLEEP=10 # gives time for the database to boot before the application
+
   auth:
-    image: auth
     depends_on:
       - auth-mongodb
       - register-server
     environment:
       - SPRING_PROFILES_ACTIVE=prod,swagger
-      - SPRING_DATA_MONGODB_URI=mongodb://localhost:27017
+      - SPRING_DATA_MONGODB_URI=mongodb://auth-mongodb:27017
       - SPRING_DATA_MONGODB_DATABASE=auth
       - JHIPSTER_SLEEP=10
       - SECURITY_USER_PASSWORD=admin
+      - SPRING_CLOUD_CONFIG_URI=http://admin:admin@register-server:8761/config
     ports:
      - "9999:9999"
     build:
@@ -33,6 +120,7 @@ services:
       dockerfile: ./auth/src/main/docker/Dockerfile
     networks:
       - "discovery"
+
   auth-mongodb:
     container_name: auth-mongodb
     image: mongo:3.2.10

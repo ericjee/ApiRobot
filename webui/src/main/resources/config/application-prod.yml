@@ -20,7 +20,7 @@ eureka:
         registerWithEureka: true
         fetchRegistry: true
         serviceUrl:
-            defaultZone: http://admin:admin@localhost:8761/eureka/
+            defaultZone: ${REGISTRY_URL}
 
 spring:
     autoconfigure:
@@ -50,7 +50,7 @@ spring:
         cache: true
 
 server:
-    port: 8080
+    port: 8086
     compression:
         enabled: true
         mime-types: text/html,text/xml,text/plain,text/css, application/javascript, application/json

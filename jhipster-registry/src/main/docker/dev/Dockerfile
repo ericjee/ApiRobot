@@ -1,7 +1,7 @@
 FROM openjdk:8-jre-alpine
 
 # Add directly the war
-ADD *.war /jhipster-registry.war
+ADD ./jhipster-registry/target/jhipster*.war /jhipster-registry.war
 
 # Add OpenSSH
 RUN apk update && apk add openssh && rm -rf /var/cache/apk/*
